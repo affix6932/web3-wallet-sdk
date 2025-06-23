@@ -26,8 +26,9 @@ import { metamaskWallet, coinbaseWallet, trustWallet } from './web-wallet-sdk.js
 // You can directly initiate a transfer, the transfer function will detect if the wallet is connected
 metamaskWallet.transfer({
   to: '0x...', // Recipient address
-  amount: '0.01', // Amount to transfer (ETH)
-  chainId: '0xaa36a7' // Target chain ID (optional)
+  amount: '0.01', // Amount to transfer 
+  chainId: '0x1' // Target chain ID 
+  token: 'USDT', // coin
 }, (error, result) => {
   if (error) {
     console.error('Transfer failed:', error);
@@ -69,7 +70,8 @@ Transfer, return Promise, success returns transfer result, failure returns error
 wallet.transfer({
   to: '0x...', // Recipient address
   amount: '0.01', // Amount to transfer (ETH)
-  chainId: '0xaa36a7' // Target chain ID (optional)
+  chainId: '0xaa36a7', // Target chain ID (optional)
+  token: 'USDT'
 }, (error, result) => {
   if (error) {
     console.error('Transfer failed:', error);
