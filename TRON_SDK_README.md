@@ -73,7 +73,7 @@ wallet.destroy();
 ### Example
 
 ```javascript
-import { tronLinkWallet } from 'path/tronSdk.js';
+import { tronLinkWallet } from 'path/tron-sdk.js';
 
 const transferTron = async () => {
   if (!tronLinkWallet.isInstalled()) {
