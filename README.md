@@ -26,9 +26,9 @@ import { metamaskWallet, coinbaseWallet, trustWallet } from './web-wallet-sdk.js
 // You can directly initiate a transfer, the transfer function will detect if the wallet is connected
 metamaskWallet.transfer({
   to: '0x...', // Recipient address
-  amount: '0.01', // Amount to transfer 
-  chainId: '0x1' // Target chain ID 
-  token: 'USDT', // coin
+  amount: '0.01', // Amount to transfer (ETH)
+  chainId: '0xaa36a7', // Target chain ID (requied)
+  token: 'USDT'
 }, (error, result) => {
   if (error) {
     console.error('Transfer failed:', error);
@@ -70,7 +70,7 @@ Transfer, return Promise, success returns transfer result, failure returns error
 wallet.transfer({
   to: '0x...', // Recipient address
   amount: '0.01', // Amount to transfer (ETH)
-  chainId: '0xaa36a7', // Target chain ID (optional)
+  chainId: '0xaa36a7', // Target chain ID (required)
   token: 'USDT'
 }, (error, result) => {
   if (error) {
@@ -148,29 +148,62 @@ wallet.onDisconnect(error);
 ### Example
 
 ```javascript
-const wallet = createWallet('metamask');
+  import { createWallet, metamaskWallet, coinbaseWallet, trustWallet } from 'path/web-wallet-sdk.js';
 
-wallet.connect();
+  // set callback in react
+  useEffect(()=> {
+    metamaskWallet.callbacks.onAccountChanged = (account) => {
+      console.log('Account changed:', account);
+    };
+    metamaskWallet.callbacks.onChainChanged = (chainId, chainName) => {
+      console.log('Chain changed:', chainId, chainName);
+    };
+    metamaskWallet.callbacks.onDisconnect = (error) => {
+      console.log('Disconnected:', error);
+    };
+    // clean up when component unmount
+    return () => {
+      metamaskWallet.destroy();
+    };
+  }, [])
 
-wallet.onAccountChanged(account);
-
-wallet.onChainChanged(chainId, chainName);
-
-wallet.onDisconnect(error);
-
-wallet.transfer({
-  to: '0x...', // Recipient address
-  amount: '0.01', // Amount to transfer (ETH)
-  chainId: '0xaa36a7' // Target chain ID (optional)
-}, (error, result) => {
-  if (error) {
-    console.error('Transfer failed:', error);
-  } else {
-    console.log('Transfer successful:', result);
+  function transfer () {
+    if (!metamaskWallet.isInstalled()) {
+      console.error('Please install MetaMask extension.');
+      return;
+    }
+    const account = await metamaskWallet.transfer(
+      {
+        to: '0x...', // Recipient address (required)
+        amount: '0.01', // Transfer amount in ETH (required)
+        chainId: '0xaa36a7', // Target chain ID (required)
+        token: 'USDT', // (required symbol token USDT/USDC/ETH)
+      },
+      (error, result) => {
+        if (error) {
+          console.error('Transfer failed:', error);
+        } else {
+          console.log('Transfer successful:', result);
+        }
+      }
+    );
   }
-});
-
-wallet.getNetwork();
-
-wallet.destroy();
+  // you can set other select components for address, amount, token, chainId
+  {/*<select onChange={(e) => setToAddress(e.target.value)}>
+    <option value="0x...">0x...</option>
+    <option value="0x...">0x...</option>
+  </select>
+  <input type="number" placeholder="Amount" onChange={(e) => setAmount(e.target.value)} />
+  <select onChange={(e) => setToken(e.target.value)}>
+    <option value="USDT">USDT</option>
+    <option value="USDC">USDC</option>
+    <option value="ETH">ETH</option>
+  </select>
+  <select onChange={(e) => setChainId(e.target.value)}>
+    <option value="0xaa36a7">BSC</option>
+    <option value="0x38">BSC Testnet</option>
+  </select>*/}
+  <div>
+    <button onClick={transfer}>Transfer</button>
+  </div>
 ```
