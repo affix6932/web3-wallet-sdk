@@ -1,13 +1,19 @@
-/**
- * web3-wallet SDK - Provides functionality for interacting with browser wallets
- * @author bitlinkpay.com
- * @version 1.0.0
- */
-
-
-// ethereumWallet.js
 class EthereumWallet {
-  constructor(provider, walletType) {
+  provider: any;
+  walletType: string;
+  account: string | null;
+  chainId: string | null;
+  callbacks: {
+    onAccountChanged: ((account: string) => void) | null;
+    onChainChanged: ((chainId: string, chainName: string) => void) | null;
+    onDisconnect: ((error: any) => void) | null;
+  };
+  _eventHandlers: {
+    accountsChanged: ((accounts: string[]) => void) | null;
+    chainChanged: ((chainId: string) => void) | null;
+    disconnect: ((error: any) => void) | null;
+  };
+  constructor(provider: any, walletType: string) {
     this.provider = provider;
     this.walletType = walletType;
     this.account = null;
@@ -23,9 +29,9 @@ class EthereumWallet {
       chainChanged: null,
       disconnect: null
     };
-
+    
     if (walletType === 'coinbase' && this.provider.isMetaMask === false) {
-      this.provider =  window.coinbaseWalletExtension;
+      this.provider =  (window as any).coinbaseWalletExtension;
     } else if (walletType === 'metamask' && this.provider.providers) {
       const metamaskProvider = this.provider.providers[0].providerMap.get('MetaMask');
       if (metamaskProvider) {
@@ -42,19 +48,19 @@ class EthereumWallet {
     this._removeEventListeners();
 
     // Account changes
-    const handleAccountsChanged = (accounts) => {
+    const handleAccountsChanged = (accounts: string[]) => {
       this.account = accounts[0] || null;
-      this.callbacks.onAccountChanged?.(this.account);
+      this.callbacks.onAccountChanged?.(this.account as string);
     };
 
     // Chain changes
-    const handleChainChanged = (chainId) => {
+    const handleChainChanged = (chainId: string) => {
       this.chainId = chainId;
       this.callbacks.onChainChanged?.(chainId, this._getChainName(chainId));
     };
 
     // Disconnect
-    const handleDisconnect = (error) => {
+    const handleDisconnect = (error: any) => {
       this.account = null;
       this.chainId = null;
       this.callbacks.onDisconnect?.(error);
@@ -176,7 +182,7 @@ class EthereumWallet {
    * @param {string} address - Address to check
    * @returns {Promise<boolean>} Whether it is a contract
    */
-  async isContract(address) {
+  async isContract(address: string) {
     if (!this.isInstalled()) {
       throw new Error('MetaMask is not installed');
     }
@@ -203,7 +209,7 @@ class EthereumWallet {
    * @param {string} params.token - Token symbol (ETH/USDT/USDC) (required)
    * @param {Function} callback - Callback function
    */
-  async transfer({ to, amount, chainId, token }, callback) {
+  async transfer({ to, amount, chainId, token }: { to: string, amount: string, chainId: string, token: string }, callback: any) {
     try {
       // 1. Check if wallet is installed
       if (!this.isInstalled()) {
@@ -234,7 +240,7 @@ class EthereumWallet {
           // Get updated network info after switch
           const updatedNetwork = await this.getNetwork();
           console.log('Switched to network:', updatedNetwork);
-        } catch (switchError) {
+        } catch (switchError:any) {
           // Network doesn't exist, needs to be added
           if (switchError.code === 4902) {
             throw new Error(`Network ${chainId} not added to wallet`);
@@ -287,7 +293,10 @@ class EthereumWallet {
             to: tokenAddress,
             value: '0x0', // No ETH value for token transfer
             data: data,
-            chainId: targetChainId
+            chainId: targetChainId,
+            // gas: '0x186a0',
+            gasPrice: await this.provider.request({ method: 'eth_gasPrice' })
+            // gasPrice: '0x3b9aca00',
           }]
         });
       }
@@ -304,7 +313,7 @@ class EthereumWallet {
    * Get token information based on chain and token symbol
    * @private
    */
-  _getTokenInfo(chainId, tokenSymbol) {
+  _getTokenInfo(chainId: string, tokenSymbol: string) {
     // Find chain config
     const chainConfig = Object.values(CHAINS).find(chain => chain.chainId === chainId);
     
@@ -346,8 +355,8 @@ class EthereumWallet {
    * Get native currency decimals for each chain
    * @private
    */
-  _getNativeCurrencyDecimals(chainId) {
-    const nativeDecimals = {
+  _getNativeCurrencyDecimals(chainId: any) {
+    const nativeDecimals: Record<any, any> = {
       '0x1': 18,      // ETH - Ethereum
       '0xaa36a7': 18, // ETH - Sepolia
       '0xa4b1': 18,   // ETH - Arbitrum
@@ -366,9 +375,9 @@ class EthereumWallet {
    * Get token contract address and decimals
    * @private
    */
-  _getTokenAddressAndDecimals(chainId, tokenSymbol) {
+  _getTokenAddressAndDecimals(chainId: string, tokenSymbol: string) {
     // Comprehensive token mapping with precise decimals
-    const tokenMappings = {
+    const tokenMappings:any = {
       // Ethereum Mainnet
       '0x1': {
         'USDT': { address: '0xdac17f958d2ee523a2206206994597c13d831ec7', decimals: 6 },
@@ -426,8 +435,8 @@ class EthereumWallet {
    * Legacy token info method for backward compatibility
    * @private
    */
-  _getLegacyTokenInfo(chainId, token) {
-    const chainConfig = Object.values(CHAINS).find(chain => chain.chainId === chainId);
+  _getLegacyTokenInfo(chainId: string, token: string) {
+    const chainConfig:any = Object.values(CHAINS).find(chain => chain.chainId === chainId);
     let tokenAddress;
     let decimals = 18; // Default decimals
 
@@ -469,7 +478,7 @@ class EthereumWallet {
    * Convert amount to token wei with specific decimals
    * @private
    */
-  _toTokenWei(amount, decimals) {
+  _toTokenWei(amount: string, decimals: number) {
     const value = parseFloat(amount) * Math.pow(10, decimals);
     return '0x' + Math.floor(value).toString(16);
   }
@@ -478,7 +487,7 @@ class EthereumWallet {
    * Build ERC-20 transfer function data
    * @private
    */
-  _buildERC20TransferData(to, value) {
+  _buildERC20TransferData(to: string, value: string) {
     // ERC-20 transfer function signature: transfer(address,uint256)
     const functionSignature = '0xa9059cbb';
     const addressParam = to.slice(2).padStart(64, '0'); // Remove 0x and pad to 32 bytes
@@ -491,16 +500,16 @@ class EthereumWallet {
    * Listen for transaction receipt
    * @private
    */
-  async _waitForTransactionReceipt(txHash, callback) {
+  async _waitForTransactionReceipt(txHash: string, callback: any) {
     try {
-      const receipt = await this._pollForTransactionReceipt(txHash);
+      const receipt:any = await this._pollForTransactionReceipt(txHash);
       console.log('receipt', receipt)
       if (receipt.status === '0x1') {
         this._handleCallback(callback, null, { 
           success: true, 
           txHash,
           receipt
-        });
+        } as any);
       } else {
         this._handleCallback(callback, new Error('Transaction execution failed'));
       }
@@ -513,7 +522,7 @@ class EthereumWallet {
    * Poll for transaction receipt
    * @private
    */
-  _pollForTransactionReceipt(txHash, attempts = 0) {
+  _pollForTransactionReceipt(txHash: string, attempts = 0) {
     return new Promise((resolve, reject) => {
       if (attempts > 30) { // 30 * 2s = 1 minute timeout
         reject(new Error('Get transaction receipt timeout'));
@@ -544,7 +553,7 @@ class EthereumWallet {
    * Handle callback
    * @private
    */
-  _handleCallback(callback, error, result = null) {
+  _handleCallback(callback: any, error: any, result = null) {
     if (typeof callback === 'function') {
       if (error) {
         callback({
@@ -555,7 +564,7 @@ class EthereumWallet {
       } else {
         callback(null, {
           success: true,
-          ...result
+          ...result as any,
         });
       }
     }
@@ -565,7 +574,7 @@ class EthereumWallet {
    * Convert ETH to wei
    * @private
    */
-  _toWei(eth) {
+  _toWei(eth: string) {
     return '0x' + (parseFloat(eth) * 1e18).toString(16);
   }
 
@@ -573,7 +582,7 @@ class EthereumWallet {
    * Get chain name
    * @private
    */
-  _getChainName(chainId) {
+  _getChainName(chainId: '0x1'|'0x38'|'0x89'|'0xa86a'|'0x2105') {
     const chains = {
       '0x1': 'Ethereum Mainnet',
       '0x38': 'Binance Smart Chain',
@@ -589,7 +598,7 @@ class EthereumWallet {
    * Check if it is a testnet
    * @private
    */
-  _isTestnet(chainId) {
+  _isTestnet(chainId: string) {
     const testnetIds = [
       '0x3',    // Ropsten
       '0x4',    // Rinkeby
@@ -603,26 +612,21 @@ class EthereumWallet {
 }
 
 // Usage example
-const getProvider = (walletType) => {
+const getProvider = (walletType: string) => {
+  const _window = window as any;
   if (typeof window === 'undefined') return null;
-  if (walletType === 'coinbase') return window.coinbaseWalletExtension;
-  if (walletType === 'metamask') return window.ethereum?.isMetaMask ? window.ethereum : null;
-  if (walletType === 'trust') return window.trustWallet;
+  if (walletType === 'coinbase') return _window.coinbaseWalletExtension;
+  if (walletType === 'metamask') return _window.ethereum?.isMetaMask ? _window.ethereum : null;
+  if (walletType === 'trust') return _window.trustWallet;
   return null;
 };
 
 // Create wallet instance
-export const createWallet = (walletType) => {
+export const createWallet = (walletType: string): EthereumWallet | null => {
   const provider = getProvider(walletType);
   return provider ? new EthereumWallet(provider, walletType) : null;
 };
 
-export const metamaskWallet = createWallet('metamask');
-export const coinbaseWallet = createWallet('coinbase');
-export const trustWallet = createWallet('trust');
-
-// ### Security Recommendations
-// 1. Always verify the validity of the receiving address
-// 2. Do not hardcode private information in the code
-// 3. Use HTTPS environment for transactions
-// 4. Suggest thorough testing on the test network before formal use
+export const metamaskWallet = createWallet('metamask') as EthereumWallet;
+export const coinbaseWallet = createWallet('coinbase') as EthereumWallet;
+export const trustWallet = createWallet('trust') as EthereumWallet;
